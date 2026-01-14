@@ -137,6 +137,14 @@ function shift_hasse_edge(V::Vector{Vector{Word}})
     return E[keep]
 end
 
+"""
+    shift_hasse_diagram(V)
+
+与えられた SFT の間の包含関係によるハッセ図を出力します.
+
+`V` の各元は SFT の forbidden word のリストです.
+図内の頂点の番号は V のインデックスに対応しています
+"""
 function shift_hasse_diagram(V::Vector{Vector{Word}})
     edges = shift_hasse_edge(V)
     n = length(V)

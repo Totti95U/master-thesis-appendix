@@ -1,6 +1,6 @@
 using ProgressMeter
 
-include("Pruning.jl")
+include("../Pruning.jl")
 
 hm = HenonMap(5.59, -1)
 max_iter = 13
@@ -207,4 +207,5 @@ function plot_primary_pruned_region(p_blocks, bwd_div=3, fwd_div=3)
 end
 
 blocks = primary_pruning_front(symb_codes)
+plot_primary_pruned_region(blocks)
 # TODO: block から forbidden word を抽出する

@@ -1,8 +1,10 @@
 # Plot functions for subshift lattice
 using GraphPlot
 
+include("../subshift-lattice.jl")
+
 V = [
-    [ [0], [1] ], #empty shift
+    # [ [0], [1] ], #empty shift
     [ [1, 0, 1, 0, 0], [1, 1, 1, 0, 0] ],
     [ [0, 1, 0, 1, 0, 0], [0, 1, 1, 1, 0, 0] ],
     [ [1, 0, 0, 1, 0], [1, 0, 1, 1, 0] ],
