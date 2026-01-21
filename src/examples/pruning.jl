@@ -5,7 +5,6 @@ include("../Pruning.jl")
 hm = HenonMap(5.59, -1)
 max_iter = 13
 
-# TODO: [-5, 5] x [-5, 5] で多様体を区切って効率的に交点を探せるようにする
 fixpt = hyperbolic_fixed_points(hm)[2]
 smfds, umfds = manifolds(hm, num_iterations=max_iter, fixed_pt=fixpt, tolerance=1e-3)
 println("Complete computing manifolds")
@@ -207,5 +206,5 @@ function plot_primary_pruned_region(p_blocks, bwd_div=3, fwd_div=3)
 end
 
 blocks = primary_pruning_front(symb_codes)
-plot_primary_pruned_region(blocks)
+plot_primary_pruned_region(blocks, 4, 4)
 # TODO: block から forbidden word を抽出する
