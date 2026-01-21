@@ -27,8 +27,8 @@ shift_flip = flip_aut ∘ shift_aut
 shift_flip([1, 2, 1, 1, 2, 2])
 # (2, 1, 2, 2, 1, 1)
 
-# To calculate the dimension representation of a block map, as the first step use `_kichens_StrongShiftEquivalence`.
-sse_flip, l_flip = BlockMaps._kichens_StrongShiftEquivalence(flip_aut)
+# To calculate the dimension representation of a block map, as the first step use `_kitchens_StrongShiftEquivalence`.
+sse_flip, l_flip = BlockMaps._kitchens_StrongShiftEquivalence(flip_aut)
 display(sse_flip)
 # StrongShiftEquivalence with lag 3:
 #           ⎡1⎤        ⎡0 1⎤ ⎡1 1⎤        ⎡1⎤           
@@ -50,7 +50,7 @@ scott_aut = BlockMap([2 1; 1 2], Dict(
     (6,) => 1,
 ), 0)
 
-sse_scott, l_scott = BlockMaps._kichens_StrongShiftEquivalence(scott_aut)
+sse_scott, l_scott = BlockMaps._kitchens_StrongShiftEquivalence(scott_aut)
 dimension_representation(sse_scott, l_scott)
 # 2×2 Matrix{Float64}:
 #  0.0  1.0

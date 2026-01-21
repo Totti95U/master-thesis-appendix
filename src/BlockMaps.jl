@@ -1926,18 +1926,18 @@ You can also use `SSE(block_map::BlockMap)` instead of `StrongShiftEquivalence(b
 ```jldoctest
 ```
 """
-function StrongShiftEquivalence(block_map::BlockMap; alg::Symbol = :Kichens)
-    if alg == :Kichens
-        return _kichens_StrongShiftEquivalence(block_map)
+function StrongShiftEquivalence(block_map::BlockMap; alg::Symbol = :Kitchens)
+    if alg == :Kitchens
+        return _kitchens_StrongShiftEquivalence(block_map)
     # #TODO: implement below
     # elseif alg == :LindMarcus
     #     return _lindmarcus_StrongShiftEquivalence(block_map)
     else
-        throw(ArgumentError("algorithm must be :Kichens"))
+        throw(ArgumentError("algorithm must be :Kitchens"))
     end
 end
 
-function _kichens_StrongShiftEquivalence(block_map::BlockMap)
+function _kitchens_StrongShiftEquivalence(block_map::BlockMap)
     # TODO: fix this function
     # TODO: modify for the case that memory is lager than length(block_map)
     # TODO: implement both of Kitchen's and Lind Marcus' version
