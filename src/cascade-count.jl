@@ -16,6 +16,9 @@ function count_fix(markers::Vector, n::Int)
 
         for marker in markers, j in 1:n
             l = length(marker)
+            if l == 0
+                break
+            end
 
             # split the marker into two vector
             marker1 = [s == "*" ? 1 : s for s in marker]
@@ -101,6 +104,9 @@ function _even1_orbit(markers::Vector, n::Int)
 
         for marker in markers, j in 1:n
             l = length(marker)
+            if l == 0
+                break
+            end
 
             # split the marker into two vector
             marker1 = [s == "*" ? 1 : s for s in marker]
