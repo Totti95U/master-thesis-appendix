@@ -643,11 +643,11 @@ function symbolic_encoding(hm::HenonMap, pts::Vector{Point2o}, partition::Functi
 end
 
 """
-    in_symbolic_plane(symb_code::HomoclinicCode) -> Point2o
+    in_symbolic_plane(symb_code::HomoclinicCode; ϵ=1e-2) -> Point2o
 
 Transform a homoclinic code into a points in 2D symbolic plane [0, 1] x [0, 1].
 """
-function in_symbolic_plane(symb_code::HomoclinicCode)
+function in_symbolic_plane(symb_code::HomoclinicCode; ϵ=1e-2)
     bwd_code, fwd_code = copy(symb_code.backward), copy(symb_code.forward)
     pushfirst!(bwd_code, 0 )
     push!(fwd_code, 0)
@@ -665,9 +665,36 @@ function in_symbolic_plane(symb_code::HomoclinicCode)
     fwd_lexi = knead_to_lexi(fwd_code)
     y = sum(bwd_lexi[i] / base.^i for i in axes(bwd_lexi, 1))
     x = sum(fwd_lexi[i] / base.^i for i in axes(fwd_lexi, 1))
-    ϵ = 1e-2
     y += sum(bwd_code) % 2 == 0 ? 0.0 : 1/base^length(bwd_code) - ϵ
     x += sum(fwd_code) % 2 == 0 ? 0.0 : 1/base^length(fwd_code) - ϵ
+    return Point2o(x, y)
+end
+
+"""
+    in_symbolic_plane_finite_tail(symb_code::HomoclinicCode, max_backward::Int, max_forward::Int) -> Point2o
+
+Transform a homoclinic code into a points in 2D symbolic plane [0, 1] x [0, 1].
+This version only considers up to `max_forward` symbols in the forward direction and `max_backward` symbols in the backward direction, treating the rest as zeros.
+"""
+function in_symbolic_plane_finite_tail(symb_code::HomoclinicCode, max_backward::Int, max_forward::Int)
+    bwd_code, fwd_code = copy(symb_code[-max_backward:-1]), copy(symb_code[0:max_forward-1])
+    base = 2
+    
+    function knead_to_lexi(code::Vector{Int})
+        w = copy(code)
+        acc = accumulate(+, w)
+        for i in axes(w[1:end-1], 1)
+            w[i+1] = acc[i] % 2 == 0 ? w[i+1] : 1 - w[i+1]
+        end
+        return w
+    end
+    bwd_lexi = knead_to_lexi(bwd_code |> reverse)
+    fwd_lexi = knead_to_lexi(fwd_code)
+    y = sum(bwd_lexi[i] / base.^i for i in axes(bwd_lexi, 1))
+    x = sum(fwd_lexi[i] / base.^i for i in axes(fwd_lexi, 1))
+    # ϵ = 1e-2
+    # y += sum(bwd_code) % 2 == 0 ? 0.0 : 1/base^length(bwd_code) - ϵ
+    # x += sum(fwd_code) % 2 == 0 ? 0.0 : 1/base^length(fwd_code) - ϵ
     return Point2o(x, y)
 end
 

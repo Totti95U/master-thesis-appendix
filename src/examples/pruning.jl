@@ -166,13 +166,46 @@ function plot_primary_pruned_region(p_blocks, bwd_div=3, fwd_div=3)
     ax = Axis(fig[1, 1], aspect=1)
     xlims!(ax, -0.05, 1.05)
     ylims!(ax, -0.05, 1.05)
-    
+
+    _bwd_len = bwd_div
+    _fwd_len = fwd_div
     for block in p_blocks
-        a, b, c, d = in_symbolic_plane.(block)
-        poly!(ax, [a, b, c, d], color=:red, strokewidth=0.5, strokecolor=:black)
+        for code in block
+            _bwd_len = max(_bwd_len, length(code.backward))
+            _fwd_len = max(_fwd_len, length(code.forward))
+        end
     end
 
-    scatter!(ax, in_symbolic_plane.(symb_codes), color=:blue, markersize=4)
+    # cutting tail of symbolic code to fit the grid and unique-ify the codes
+    to_show = Array{HomoclinicCode}(undef, length(symb_codes))
+    for (i, code) in enumerate(symb_codes)
+        to_show[i] = HomoclinicCode(code[-_bwd_len:-1], code[0:_fwd_len-1])
+    end
+    unique!(to_show)
+
+    _in_symbolic_plane_finite_tail = x -> in_symbolic_plane_finite_tail(x, _bwd_len, _fwd_len)
+
+    for block in p_blocks
+        coords = Array{Point2o}(undef, length(block))
+        for (i, v) in enumerate(block)
+            coords[i] = in_symbolic_plane(v, ϵ=0.0)
+        end
+        poly!(ax, coords, color=:red, strokewidth=0.5, strokecolor=:black)
+        # scatter!(ax, coords, color=:red, markersize=4)
+    end
+
+    for code in to_show
+        coord = _in_symbolic_plane_finite_tail(code)
+        poly!(
+            ax, [
+                coord, 
+                coord + Point2o(1/2^_fwd_len, 0),
+                coord + Point2o(1/2^_fwd_len, 1/2^_bwd_len),
+                coord + Point2o(0, 1/2^_bwd_len)
+            ], color=:blue, strokewidth=0.5, strokecolor=:black, alpha=0.5
+        )
+        # scatter!(ax, _in_symbolic_plane_finite_tail(code), color=:blue, markersize=4)
+    end
 
     function lexi_to_knead(code::Vector{Int})
         w = similar(code)
@@ -193,9 +226,9 @@ function plot_primary_pruned_region(p_blocks, bwd_div=3, fwd_div=3)
         end
 
         # set axis ticks and labels
-        ticks = [in_symbolic_plane(HomoclinicCode(Int[], c))[1] for c in all_codes]
+        ticks = [in_symbolic_plane_finite_tail(HomoclinicCode(Int[], c), 1, divnum)[1] for c in all_codes]
         tick_labels = [join(c) for c in all_codes]
-        return ticks, tick_labels
+        return ticks .+ 1/2^(divnum+1), tick_labels
     end
     
     ax.xticks = keading_label(fwd_div, false)
@@ -206,5 +239,5 @@ function plot_primary_pruned_region(p_blocks, bwd_div=3, fwd_div=3)
 end
 
 blocks = primary_pruning_front(symb_codes)
-plot_primary_pruned_region(blocks, 4, 4)
+fig = plot_primary_pruned_region(blocks, 4, 4)
 # TODO: block から forbidden word を抽出する
