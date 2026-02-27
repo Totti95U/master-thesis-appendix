@@ -240,4 +240,3 @@ end
 
 blocks = primary_pruning_front(symb_codes)
 fig = plot_primary_pruned_region(blocks, 4, 4)
-# TODO: block から forbidden word を抽出する
