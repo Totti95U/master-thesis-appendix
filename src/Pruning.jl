@@ -2,7 +2,6 @@
 # See: Shudo & Hagiwara (2004), "An algorithm to prune the area-preserving Hénon map" from Journal of Physics. A. Mathematical and General
 
 using CairoMakie, LinearAlgebra, SpatialIndexing
-using ProgressMeter
 
 "working accuracy alias:"
 const MyFloat = Float64
@@ -16,7 +15,14 @@ Base.isfinite(pt::Point2o) = all(isfinite, pt)
 """
     HenonMap(a, b)
 
-Create a Hénon map with parameters `a` and `b`.
+Create a Hénon map with parameters `a` and `b` defined by
+
+```math
+H_{a, b}(x, y) = (-x^2 + b y + a, x)
+```
+
+The map is area-preserving if ``|b| = 1``.
+When ``b = -1``, the map is orientation-preserving.
 """
 struct HenonMap
     a::MyFloat
@@ -127,7 +133,6 @@ Return the stable and unstable manifolds of the hyperbolic fixed points of the H
 If `fixed_pt_id` is provided, only compute manifolds for the specified fixed points (1-based index).
 """
 function manifolds(hm::HenonMap; num_iterations=16, delta::MyFloat=MyFloat(1e-5), tolerance=1e-3, fixed_pt::Point2o)
-    hfps = hyperbolic_fixed_points(hm)
     stable_manifolds = Vector{Point2o}[]
     unstable_manifolds = Vector{Point2o}[]
 
@@ -144,7 +149,7 @@ function manifolds(hm::HenonMap; num_iterations=16, delta::MyFloat=MyFloat(1e-5)
                 xs = image_of(tmp_f, xs; tolerance=tolerance)
                 # trim the manifold to only include points within [-5, 5] x [-5, 5]
                 xs = filter(x -> all(-5 .<= x .<= 5), xs)
-                # devide xs at the gaps larger than tolerance
+                # divide xs at the gaps larger than tolerance
                 cut_idx = Int[1]
                 for i in axes(xs[1:end-1], 1)
                     if norm(xs[i+1] - xs[i]) > 10 * tolerance
@@ -339,6 +344,17 @@ end
     HomoclinicCode(backward::Vector{Int}, forward::Vector{Int})
 
 A type representing the symbolic code of a homoclinic point, with forward and backward components.
+
+# Example
+```jldoctest pruning
+julia> HomoclinicCode([1, 0], [1,0,1])
+5-element HomoclinicCode:
+(0ᵒᵒ)10.101(0ᵒᵒ)
+
+julia> HomoclinicCode("10.101") # string constructor
+5-element HomoclinicCode:
+(0ᵒᵒ)10.101(0ᵒᵒ)
+```
 """
 struct HomoclinicCode
     backward::Vector{Int}
@@ -356,6 +372,26 @@ end
 
 "Constructor from a tuple of two vectors. The first element will be the backward code, the second will be the forward code."
 HomoclinicCode(c::Tuple{Vector{Int}, Vector{Int}}) = HomoclinicCode(c[1], c[2])
+
+"""
+    HomoclinicCode(s::String)
+
+Construct a `HomoclinicCode` from a string representation like "1000.0001".
+The string should contain exactly one '.' character separating the backward and forward parts.
+"""
+function HomoclinicCode(s::String)
+    if !occursin('.', s)
+        error("invalid code string: missing '.' separator")
+    end
+    parts = split(s, '.')
+    if length(parts) != 2
+        error("invalid code string: should contain exactly one '.' separator")
+    end
+    bwd_str, fwd_str = parts
+    bwd_vec = [parse(Int, c) for c in bwd_str]
+    fwd_vec = [parse(Int, c) for c in fwd_str]
+    return HomoclinicCode(bwd_vec, fwd_vec)
+end
 
 function Base.:(==)(hc1::HomoclinicCode, hc2::HomoclinicCode)
     return hc1.backward == hc2.backward && hc1.forward == hc2.forward
@@ -455,6 +491,31 @@ function trim(hc::HomoclinicCode)
     new_bwd = bwd_start === nothing ? Int[] : hc.backward[bwd_start:end]
 
     return HomoclinicCode(new_fwd, new_bwd)
+end
+
+"""
+Convert a binary code to its lexicographically equivalent form. This is needed for correct ordering in the symbolic plane. This is the inverse of `_lexi_to_knead`.
+The first digit is the least significant bit in the lexicographical order, and the last digit is the most significant bit.
+"""
+function _knead_to_lexi(code::Vector{Int})
+    w = copy(code)
+    acc = accumulate(+, w)
+    for i in axes(w[1:end-1], 1)
+        w[i+1] = acc[i] % 2 == 0 ? w[i+1] : 1 - w[i+1]
+    end
+    return reverse(w)
+end
+
+"Convert a binary code from lexicographical form back to kneading form. This is the inverse of `_knead_to_lexi`."
+function _lexi_to_knead(code::Vector{Int})
+    tmp_code = reverse(copy(code))
+    w = similar(code)
+    # acc = accumulate(+, code)
+    w[1] = tmp_code[1]
+    for i in axes(w[1:end-1], 1)
+        w[i+1] = sum(w[1:i]) % 2 == 0 ? tmp_code[i+1] : 1 - tmp_code[i+1]
+    end
+    return w
 end
 
 "squared Euclidean distance between two 2D points/tuples"
@@ -607,18 +668,19 @@ function closest_point(p::Point2o, segs, tree)
 end
 
 """
-    symbolic_encoding(hm::HenonMap, pts::Vector{Point2o}, partition::Function, psb::Vector{Point2o}, pub::Vector{Point2o}; iter=100) -> HomoclinicCode
+    symbolic_encoding(hm::HenonMap, pts::Vector{Point2o}, partition::Function, psb::Vector{Point2o}, pub::Vector{Point2o}; iter=15) -> HomoclinicCode
 
 Compute symbolic encoding of each point in `pts` under Hénon map `hm` using `partition` function.
 The length of backward and forward codes are continued until iteration of the point hit the primary (un-)stable branch, `psb` (`pub`).
 `partition` should map a `Point2o` to an integer symbol.
 """
-function symbolic_encoding(hm::HenonMap, pts::Vector{Point2o}, partition::Function, psb::Vector{Point2o}, pub::Vector{Point2o}; iter=100)
-    fwd_codes = Vector{Int}[]
-    bwd_codes = Vector{Int}[]
+function symbolic_encoding(hm::HenonMap, pts::Vector{Point2o}, partition::Function, psb::Vector{Point2o}, pub::Vector{Point2o}; iter=15)
+    fwd_codes = Vector{Vector{Int}}(undef, length(pts))
+    bwd_codes = Vector{Vector{Int}}(undef, length(pts))
     psb_segs, psb_tree = prepare_polyline(psb)
     pub_segs, pub_tree = prepare_polyline(pub)
-    @showprogress for pt in pts
+    Threads.@threads for i in axes(pts, 1)
+        pt = pts[i]
         fwd_code = Int[]
         x = pt
         for _ in 1:iter
@@ -636,8 +698,8 @@ function symbolic_encoding(hm::HenonMap, pts::Vector{Point2o}, partition::Functi
             pushfirst!(bwd_code, partition(x))
         end
 
-        push!(fwd_codes, fwd_code)
-        push!(bwd_codes, bwd_code)
+        fwd_codes[i] = fwd_code
+        bwd_codes[i] = bwd_code
     end
     return [HomoclinicCode(bc, fc) for (bc, fc) in zip(bwd_codes, fwd_codes)]
 end
@@ -653,16 +715,8 @@ function in_symbolic_plane(symb_code::HomoclinicCode; ϵ=1e-2)
     push!(fwd_code, 0)
     base = 2
     
-    function knead_to_lexi(code::Vector{Int})
-        w = copy(code)
-        acc = accumulate(+, w)
-        for i in axes(w[1:end-1], 1)
-            w[i+1] = acc[i] % 2 == 0 ? w[i+1] : 1 - w[i+1]
-        end
-        return w
-    end
-    bwd_lexi = knead_to_lexi(bwd_code |> reverse)
-    fwd_lexi = knead_to_lexi(fwd_code)
+    bwd_lexi = _knead_to_lexi(bwd_code |> reverse)
+    fwd_lexi = _knead_to_lexi(fwd_code)
     y = sum(bwd_lexi[i] / base.^i for i in axes(bwd_lexi, 1))
     x = sum(fwd_lexi[i] / base.^i for i in axes(fwd_lexi, 1))
     y += sum(bwd_code) % 2 == 0 ? 0.0 : 1/base^length(bwd_code) - ϵ
@@ -680,16 +734,8 @@ function in_symbolic_plane_finite_tail(symb_code::HomoclinicCode, max_backward::
     bwd_code, fwd_code = copy(symb_code[-max_backward:-1]), copy(symb_code[0:max_forward-1])
     base = 2
     
-    function knead_to_lexi(code::Vector{Int})
-        w = copy(code)
-        acc = accumulate(+, w)
-        for i in axes(w[1:end-1], 1)
-            w[i+1] = acc[i] % 2 == 0 ? w[i+1] : 1 - w[i+1]
-        end
-        return w
-    end
-    bwd_lexi = knead_to_lexi(bwd_code |> reverse)
-    fwd_lexi = knead_to_lexi(fwd_code)
+    bwd_lexi = _knead_to_lexi(bwd_code |> reverse)
+    fwd_lexi = _knead_to_lexi(fwd_code)
     y = sum(bwd_lexi[i] / base.^i for i in axes(bwd_lexi, 1))
     x = sum(fwd_lexi[i] / base.^i for i in axes(fwd_lexi, 1))
     # ϵ = 1e-2
@@ -773,6 +819,16 @@ function Ps(t::Int, hc::HomoclinicCode)
     return HomoclinicCode(new_bwd, hc.forward)
 end
 
+"""
+        primary_pruning_front(symb_codes::Vector{HomoclinicCode}) -> Vector{NTuple{4, HomoclinicCode}}
+
+Given a list of homoclinic codes, compute the primary pruning front as a list of blocks.
+Each block is represented as a tuple of four homoclinic codes `(a, b, c, d)`, where:
+- `a` is the top-right corner of the block
+- `b` is the bottom-right corner of the block
+- `c` is the bottom-left corner of the block
+- `d` is the top-left corner of the block
+"""
 function primary_pruning_front(symb_codes::Vector{HomoclinicCode})
     # 1. Setting Initial conditions
     a = HomoclinicCode([1,], [0, 1])
@@ -783,10 +839,10 @@ function primary_pruning_front(symb_codes::Vector{HomoclinicCode})
 
     blocks = Vector{NTuple{4, HomoclinicCode}}() # (a, b, c, d) for each block D
 
-    while true && (j < 100)
+    while true
         # 2. Find the depth of the block D
         top = a
-        while true && (t < 100)
+        while true
             while true
                 if (Ps(t, top) ∈ symb_codes) || (hat(Ps(t, top)) ∈ symb_codes)
                     t += 1
@@ -794,7 +850,6 @@ function primary_pruning_front(symb_codes::Vector{HomoclinicCode})
                     break
                 end
             end
-            println("t=$t, top=$top")
             bot = Ps(t, top)
             top = Ns(bot)
             if (top ∈ symb_codes) ⊻ (top ≺ b)[1]
@@ -802,11 +857,9 @@ function primary_pruning_front(symb_codes::Vector{HomoclinicCode})
                 break
             end
         end
-        println("b=$b")
         # 3. Find the width of the block D
         c = HomoclinicCode(Int[], Int[])
-        while true && (h < 100)
-            println("h=$h")
+        while true
             if !((Pu(h, b) ∉ symb_codes) ⊻ (Pu(h, (Nu∘Pu)(h, b)) ∉ symb_codes))
                 h += 1
                 continue
@@ -820,9 +873,7 @@ function primary_pruning_front(symb_codes::Vector{HomoclinicCode})
         end
 
         # 4. Complete the block D
-        println("c=$c")
         d = HomoclinicCode([1], c.forward)
-        println("d=$d")
         push!(blocks, (a, b, c, d))
         push!(blocks, (hat(a), hat(b), hat(c), hat(d)))
 
@@ -835,7 +886,127 @@ function primary_pruning_front(symb_codes::Vector{HomoclinicCode})
         end
     end
 
-    println("j = $j, t = $t, h = $h")
     # 6. return the pruning front
     return blocks
+end
+
+"""
+    forbidden_words(blocks::Vector{NTuple{4, HomoclinicCode}}) -> Vector{String}
+
+Given a list of blocks representing the primary pruning front, compute the corresponding forbidden words.
+
+# Example
+```jldoctest pruning
+julia> block = (HomoclinicCode("1.01"), HomoclinicCode("1001.01"), HomoclinicCode("1001.010001"), HomoclinicCode("1.010001"))
+(HomoclinicCode(1.01), HomoclinicCode(1001.01), HomoclinicCode(1001.010001), HomoclinicCode(1.010001))
+
+julia> forbidden_words([block])
+1-element Vector{String}:
+ "00101000"
+```
+"""
+function forbidden_words(blocks::Vector{NTuple{4, HomoclinicCode}})
+    words = Vector{String}()
+    
+    lexi_to_num(c::Vector{Int}) = sum(c[i] * 2^(i-1) for i in axes(c, 1))
+    num_to_lexi(n::Int, len::Int) = [n >> (i-1) & 1 for i in 1:len]
+    
+    for (a, b, c, _) in blocks
+        # compute backward part
+        bwd_len = max(length(a.backward), length(b.backward))
+        a_bwd_lexi = _knead_to_lexi(a[-1:-1:-bwd_len])
+        b_bwd_lexi = _knead_to_lexi(b[-1:-1:-bwd_len])
+        num_max = max(lexi_to_num(a_bwd_lexi), lexi_to_num(b_bwd_lexi))
+        num_min = min(lexi_to_num(a_bwd_lexi), lexi_to_num(b_bwd_lexi))
+        b_words = Vector{Int}[]
+        # iterate over all binary strings of length bwd_len that are between min_bwd_lexi and max_bwd_lexi in lexicographical order
+        for i in num_min:num_max
+            push!(b_words, num_to_lexi(i, bwd_len) |> _lexi_to_knead)
+        end
+        # amalgamate pairs of words that differ only in the first symbol, since they represent the same pruning condition
+        for _ in 1:bwd_len
+            tmp_words = Vector{Int}[]
+            for w in b_words
+                w_alt = copy(w)
+                w_alt[end] = 1 - w_alt[end]
+                if w_alt in b_words
+                    push!(tmp_words, w_alt[1:end-1])
+                    # remove w and w_alt from b_words to avoid duplication
+                    deleteat!(b_words, findfirst(==(w), b_words))
+                    deleteat!(b_words, findfirst(==(w_alt), b_words))
+                else
+                    push!(tmp_words, w)
+                end
+            end
+            b_words = tmp_words
+        end
+
+        # compute forward part
+        fwd_len = max(length(b.forward), length(c.forward))
+        b_fwd_lexi = _knead_to_lexi(b[0:fwd_len-1])
+        c_fwd_lexi = _knead_to_lexi(c[0:fwd_len-1])
+        num_max = max(lexi_to_num(b_fwd_lexi), lexi_to_num(c_fwd_lexi))
+        num_min = min(lexi_to_num(b_fwd_lexi), lexi_to_num(c_fwd_lexi))
+        f_words = Vector{Int}[]
+        for i in num_min:num_max
+            push!(f_words, num_to_lexi(i, fwd_len) |> _lexi_to_knead)
+        end
+        # amalgamate pairs of words that differ only in the first symbol, since they represent the same pruning condition
+        for _ in 1:fwd_len
+            tmp_words = Vector{Int}[]
+            for w in f_words
+                w_alt = copy(w)
+                w_alt[end] = 1 - w_alt[end]
+                if w_alt in f_words
+                    push!(tmp_words, w_alt[1:end-1])
+                    deleteat!(f_words, findfirst(==(w), f_words))
+                    deleteat!(f_words, findfirst(==(w_alt), f_words))
+                else
+                    push!(tmp_words, w)
+                end
+            end
+            f_words = tmp_words
+        end
+        # combine backward and forward parts to get forbidden words
+        for bwd in reverse.(b_words)
+            for fwd in f_words
+                push!(words, string(join(bwd, ""), join(fwd, "")))
+            end
+        end
+    end
+    
+    return words
+end
+
+"""
+    markerize(words::Vector{String}) -> Vector{String}
+
+Given a list of forbidden words, compute the corresponding markers.
+
+# Example
+```jldoctest pruning
+julia> markerize(["0010100", "0011100", "0010101"])
+2-element Vector{String}:
+ "001010X"
+ "0011100"
+```
+"""
+function markerize(words::Vector{String})
+    markers = Vector{String}()
+    while !isempty(words)
+        w = pop!(words)
+        found_pair = false
+        for i in 1:length(w)
+            target = collect(w)
+            target[i] = w[i] == '0' ? '1' : '0'
+            if String(target) in words
+                push!(markers, w[1:i-1] * "X" * w[i+1:end])
+                deleteat!(words, findfirst(==(String(target)), words))
+                found_pair = true
+                break
+            end
+        end
+        found_pair || push!(markers, w)
+    end
+    return markers
 end
