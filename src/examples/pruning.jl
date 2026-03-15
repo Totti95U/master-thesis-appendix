@@ -185,13 +185,13 @@ function plot_primary_pruned_region(p_blocks, bwd_div=3, fwd_div=3)
 
     _in_symbolic_plane_finite_tail = x -> in_symbolic_plane_finite_tail(x, _bwd_len, _fwd_len)
 
-    for block in p_blocks
+    for (i, block) in enumerate(p_blocks)
         coords = Array{Point2o}(undef, length(block))
-        for (i, v) in enumerate(block)
-            coords[i] = in_symbolic_plane(v, ϵ=0.0)
+        for (ii, v) in enumerate(block)
+            coords[ii] = in_symbolic_plane(v, ϵ=0.0)
         end
-        poly!(ax, coords, color=:red, strokewidth=0.5, strokecolor=:black)
-        # scatter!(ax, coords, color=:red, markersize=4)
+        poly!(ax, coords, color=:red, strokewidth=0.5, strokecolor=:white)
+        text!(ax, sum(coords) / length(coords), text="$i", align=(:center, :center), color=:white)
     end
 
     for code in to_show
@@ -227,8 +227,7 @@ function plot_primary_pruned_region(p_blocks, bwd_div=3, fwd_div=3)
 
         # set axis ticks and labels
         ticks = [in_symbolic_plane_finite_tail(HomoclinicCode(Int[], c), 1, divnum)[1] for c in all_codes]
-        tick_labels = [join(c) for c in all_codes]
-        return ticks .+ 1/2^(divnum+1), tick_labels
+        return ticks .+ 1/2^(divnum+1), [join(c) * '.' for c in reverse.(all_codes)]
     end
     
     ax.xticks = keading_label(fwd_div, false)
@@ -238,5 +237,6 @@ function plot_primary_pruned_region(p_blocks, bwd_div=3, fwd_div=3)
     return fig
 end
 
+### Pruning
 blocks = primary_pruning_front(symb_codes)
 fig = plot_primary_pruned_region(blocks, 4, 4)
