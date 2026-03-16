@@ -8,6 +8,48 @@
 
 ## subshift-lattice.jl
 
+フルシフト ``\Sigma_2`` の与えられた subshifts of finite type の間の包含関係を計算するためのプログラムです。
+このプログラムは、subshift of finite type を構成する forbidden words の集合を入力として受け取り、subshift of finite type の間の包含関係を計算します。
+Subshift of finite type は、`0` と `1` をアルファベットとする有限個の forbidden words の配列で表されます。
+
+```@repl subshift-lattice
+include("../../src/subshift-lattice.jl") # hide
+[ [1, 0, 1, 0, 0], [1, 1, 1, 0, 0] ] ⊏ [ [0, 1, 0, 1, 0, 0], [0, 1, 1, 1, 0, 0] ]
+[ [1, 0, 1, 0, 0], [1, 1, 1, 0, 0] ] ⊐ [ [0, 1, 0, 1, 0, 0], [0, 1, 1, 1, 0, 0] ]
+```
+
+また、`shift_hasse_diagram` 関数を使うことで、与えられた subshifts of finite type の集合に対して、包含関係を表す Hasse diagram を描画することができます。
+
+```@figure subshift-lattice
+shift_hasse_diagram([
+    [ [1, 0, 1, 0, 0], [1, 1, 1, 0, 0] ],
+    [ [0, 1, 0, 1, 0, 0], [0, 1, 1, 1, 0, 0] ],
+    [ [0, 0, 1, 0, 1, 0, 0], [0, 0, 1, 1, 1, 0, 0] ],
+    [
+        [0, 0, 1, 0], [0, 1, 1, 0],
+        [1, 0, 0, 1, 1, 1], [1, 0, 1, 1, 1, 1],
+    ],
+    [ 
+        [0, 0, 1, 0], [0, 1, 1, 0],
+        [1, 1, 0, 0, 1, 1, 1, 0], [1, 1, 0, 1, 1, 1, 1, 0],
+    ],
+    [ [0, 0, 1, 0], [0, 1, 1, 0] ],
+    [
+        [1, 0, 0, 1, 0], [1, 0, 1, 1, 0],
+        [0, 0, 0, 0, 1, 0], [0, 0, 0, 1, 1, 0],
+        [1, 0, 0, 1, 1, 1], [1, 0, 1, 1, 1, 1],
+    ],
+    [ [1, 0, 0, 1, 0], [1, 0, 1, 1, 0] ],
+    Word[] #full shift (`Word` is an alias for `Vector{Int}`)
+])
+```
+
+![Hasse diagram of subshifts of finite type](figs/subshift-lattice.svg)
+
+数字は、与えられた subshifts of finite type の集合におけるインデックスを表しています。
+例えば上の実行例において、フルシフトのインデックスは `9` であり、`1` から `8` までの全ての頂点が `9` へのパスを持っています。
+よって、フルシフトは全ての subshift of finite type を包含していることがわかります。
+
 ## Pruning.jl
 
 Hagiwara と Shudo [^HS] によって提案された、保存系の実 Hénon 写像の primary pruned region を推定するアルゴリズムを Julia で実装したものです。

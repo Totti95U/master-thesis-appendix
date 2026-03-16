@@ -1,4 +1,4 @@
-using Graphs
+using Graphs, GraphPlot, CairoMakie
 
 const Word = Vector{Int}
 
@@ -110,7 +110,7 @@ function ⊐(B1::Vector{Word}, B2::Vector{Word})
 end
 
 """
-    shift_hasse(V::Vector{Vector{Word}})
+    shift_hasse_edge(V::Vector{Vector{Word}})
 
 Construct the Hasse diagram of the subshift lattice defined by the list of forbidden word sets `V`.
 """
@@ -140,10 +140,9 @@ end
 """
     shift_hasse_diagram(V)
 
-与えられた SFT の間の包含関係によるハッセ図を出力します.
+Construct the Hasse diagram of the subshift lattice defined by the list of forbidden word sets `V` and draw it.
 
-`V` の各元は SFT の forbidden word のリストです.
-図内の頂点の番号は V のインデックスに対応しています
+The vertex numbers in the diagram correspond to the indices of `V`.
 """
 function shift_hasse_diagram(V::Vector{Vector{Word}})
     edges = shift_hasse_edge(V)
@@ -153,6 +152,7 @@ function shift_hasse_diagram(V::Vector{Vector{Word}})
         add_edge!(G, i, j)
     end
 
+    # Following layout algorithm use topological sort
     # compute rank (levels)
     rank = fill(0, n)
     for v in topological_sort(G)
@@ -200,6 +200,6 @@ function shift_hasse_diagram(V::Vector{Vector{Word}})
     #     end
     # end
 
-    # draw
+    # output graph
     gplot(G, positions[1, :], positions[2, :]; nodelabel=1:n)
 end
