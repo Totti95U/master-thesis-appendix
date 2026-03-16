@@ -6,9 +6,54 @@
 
 ## cascade-count.jl
 
+フルシフト ``\Sigma_2 = \{1, 2\}^\mathbb{Z}`` の与えられた subshifts of finite type ``X`` に対して、``\Sigma_2 \setminus X`` における ``(2, n)``-cascade の数を計算するためのプログラムです。
+Subshift of finite type は `1`, `2` と `"*"` をアルファベットとする有限個の forbidden words の配列で表されます。
+ここで `"*"` は `1` と `2` のどちらかを表すワイルドカードで、例えば `(1, 2, "*", 1)` は `(1, 2, 1, 1)` と `(1, 2, 2, 1)` の両方を表します。
+
+`cascade-count.jl` には ``2``-cascade の数を計算するための関数が3つ定義されています。
+
+[`count_cascade`](@ref) は、与えられた subshift of finite type ``X`` に対して、``\Sigma_2 \setminus X`` における ``(2, n)``-cascade の数 ``c_n`` を次の漸化式を用いて計算します。
+
+```math
+    c_n = \frac{1}{2} \left(p_n - \sum_{\substack{n = 2^i\dot k, \\ i \ge 1}} c_k \right).
+```
+
+ここで、$p_n$ は ``\Sigma_2 \setminus X`` における周期 ``n`` の周期軌道の数を表しています。
+
+[`gcd2_cascade`](@ref) は、与えられた subshift of finite type ``X`` に対して、``\Sigma_2 \setminus X`` における ``(2, n)``-cascade の数 ``c_n`` を $\gcd$ を用いた以下の式で計算します。
+
+```math
+    c_n = \frac{1}{2n} \sum_{d | n} \gcd(2, d) \mu\left(d\right) f_{n/d}.
+```
+
+ここで、``\mu`` は Möbius 関数、``f_{n/d}`` は ``\Sigma_2 \setminus X`` における ``\sigma^{n/d}`` の不動点の数を表しています。
+
+[`even1_cascade`](@ref) は、与えられた subshift of finite type ``X`` に対して、``\Sigma_2 \setminus X`` における ``(2, n)``-cascade の数 ``c_n`` を、周期 ``n`` の周期軌道のうち `1` の数が偶数であるものの数を用いて計算します。
+
+修士論文の内容から、これら3つの関数は全て同じ結果を返すことが分かります。
+
+```@repl cascade-count
+include("../../src/cascade-count.jl") # hide
+count_cascade([(2, 1, "*", 2, 1)], 12)' # `'` is just for transpose
+gcd2_cascade([(2, 1, "*", 2, 1)], 12)' # `'` is just for transpose
+even1_cascade([(2, 1, "*", 2, 1)], 12)' # `'` is just for transpose
+```
+
+3つの関数は forbidden words を表す配列のほかに整数値 `m` を引数に取ります。
+この `m` を元に、関数は `m` 以下の ``n`` に対する ``(2, n)``-cascade の数を計算して、ベクトルとして返します。
+例えば、上の実行例では、``\Sigma_2 \setminus X`` における ``(2, n)``-cascade の数を、``n = 1, 2, ..., 12`` に対して計算しています。
+
+``X`` の subshift of finite type ``Y`` に対して、``X \setminus Y`` における ``(2, n)``-cascade の数を計算するためには、``Y`` に対する計算結果から ``X`` に対する計算結果を引けば良いです。
+
+```@repl cascade-count
+X = [(2, 1, "*", 2, 1, 1)]
+Y = [(2, 1, "*", 2, 1)]
+count_cascade(Y, 12)' - count_cascade(X, 12)' # `'` is just for transpose
+```
+
 ## subshift-lattice.jl
 
-フルシフト ``\Sigma_2`` の与えられた subshifts of finite type の間の包含関係を計算するためのプログラムです。
+フルシフト ``\Sigma_2 = \{0, 1\}^\mathbb{Z}`` の与えられた subshifts of finite type の間の包含関係を計算するためのプログラムです。
 このプログラムは、subshift of finite type を構成する forbidden words の集合を入力として受け取り、subshift of finite type の間の包含関係を計算します。
 Subshift of finite type は、`0` と `1` をアルファベットとする有限個の forbidden words の配列で表されます。
 
