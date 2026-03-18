@@ -1,4 +1,5 @@
 name = "MasterThesisAppendix"
+uuid = "550e8d4f-3d80-48f5-8f3f-1234567890ab"
 version = "0.1.0"
 
 [workspace]
