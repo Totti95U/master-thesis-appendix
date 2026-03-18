@@ -1,5 +1,7 @@
 # subshift-lattice.jl
 
+---
+
 ```@docs
 ⊏
 ```

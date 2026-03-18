@@ -1,5 +1,7 @@
 # cascade-count.jl
 
+---
+
 ```@docs
 count_cascade
 ```

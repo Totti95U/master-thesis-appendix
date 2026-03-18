@@ -1,5 +1,7 @@
 # Pruning.jl
 
+---
+
 ```@docs
 HenonMap
 ```

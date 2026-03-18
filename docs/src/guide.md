@@ -2,9 +2,248 @@
 
 公開しているプログラムについて、簡単な説明と使用方法を記載します。
 
+---
+
+```@contents
+Pages = ["guide.md"]
+Depth = 2:2
+```
+
+---
+
 ## BlockMaps.jl
 
+```@meta
+CurrentModule = BlockMaps
+```
+
+`BlockMaps.jl` では subshift of finite type の shift map と可換な連続写像 (Block map / Sliding block code) を扱う [`BlockMap`](@ref) が定義されています. また [`BlockMap`](@ref) 同士の合成や付随する [`StrongShiftEquivalence`](@ref) を返す関数なども使用することができます.
+
+### Block Map
+
+Subshift of finite type の間のシフト可換な連続写像は有限長の語 (block) とそれの変換先の記号によって表現できることが知られています. そこで [`BlockMap`](@ref) は各ブロックとその変換先の記号の組による `Dict` によって表現されます.
+
+```@repl blockmaps
+include("../../src/BlockMaps.jl") # hide
+using .BlockMaps
+shift_flip = BlockMap(
+    [2;;], 
+    [2;;],
+    Dict(
+        (1, 1) => 2,
+        (1, 2) => 1,
+        (2, 1) => 2,
+        (2, 2) => 1,
+    ), 
+    0
+)
+```
+
+[`BlockMap`](@ref) の最初の2つの引数は block map のドメインとコドメインを表しており, `Matrix{Int}` 型の正方行列によって指定します. 例えば, 上で定義した `shift_flip` は full two-shift の間の block map ``X_{[2]} \to X_{[2]}`` です.
+
+3番目の引数によって block map の具体的な写像規則を指定します. 写像規則は `Dict{NTuple{N, Int}, Int}` 型で表現されます. ここで `N` は 1 以上の整数です. `shift_flip` の場合, 入力列 ``x \in X_{[2]}`` の長さ 2 のブロック ``(x_i, x_{i+1})`` が `(1, 1)` の場合は ``y = \mathrm{shift\_flip}(x)`` の ``i`` 番目の記号 ``y_i`` は鍵 `(1, 1)` の値である ``2`` になります. 同様に ``(1, 2)`` の場合は ``1`` に, ``(2, 1)`` の場合は ``2`` になります.
+
+最後の引数は `BlockMap` の `memory` field を指定するものです. この値は `Int` 型の数値によって与えられ,  `BlockMap` が現在見ているブロックの位置と出力先の記号の位置をどれほどずらすかを指定します. 例えば, 一般的な block map ``\varphi: X_A \to X_B`` と写像 ``\varphi`` による ``x \in X_A`` の移り先 ``y = \varphi(x)`` を考えます. ``\varphi`` を表現する `BlockMap` の定義ブロック (写像規則をしてする辞書型の鍵) の長さを ``N``, `memory` field の値を ``m`` とすると ``i`` 番目の ``y`` の値 ``y_i`` は
+
+```math
+y_i = \varphi[x_{i-m}, x_{i+1-m}, \dots, x_{i+N-m}]
+```
+
+という風にして定まります.
+
+入力を簡便にするために [`BlockMap`](@ref) の写像規則には `Dict{String, Int}` と `Dict{String, Char}` を用いることもできます. また, ドメインとコドメインが同じ場合は省略することが可能です.
+
+```@repl blockmaps
+BlockMap([2;;], Dict("1" => 2, "2" => 1), -1)
+```
+
+#### 組み込みの BlockMap コンストラクタ
+
+一部の特殊な `BlockMap` にはコンストラクタを実装しています.
+
+基本的に引数として domain・codomain の subshift of finite type を表す行列を取ります. 行列の全ての成分が ``0`` または ``1`` の場合は vertex shift, それ以外では edge shift として domain・codomain の subshift of finite type を扱います.
+
+##### Identity Map
+
+[`BlockMaps.identity`](@ref) は恒等写像のコンストラクタです. Domain・codomain が一致するため受け取る引数は一つのみです.
+
+```@repl blockmaps
+BlockMaps.identity([1 1; 1 0])
+BlockMaps.identity([2;;])
+BlockMaps.identity([2 1; 1 2])
+```
+
+##### Shift Map
+
+[`shift`](@ref) は指定した subshift of finite type 上の shift map のコンストラクタです. Domain・codomain が一致するため受け取る引数は一つのみです.
+
+```@repl blockmaps
+shift([1 1; 1 0])
+shift([2;;])
+shift([2 1; 1 2])
+```
+
+##### Compound Marker Endomorphism
+
+[`marker_endomorphism`](@ref) は full tow-shift ``X_{[2]}`` 上の compound marker endomorphism のコンストラクタです. `1`, `2` と `*` からなる複数列を marker として受け取ります. Marker を指定するための引数の型には `Tuple{Vararg{String}}` や `Vector{String}` が使用できます.
+
+```@repl blockmaps
+marker_endomorphism(("1 * 2 2", "1 * 1")) # スペースで記号同士を分ける
+marker_endomorphism("1 * 2 2", "1 * 1")
+```
+
+### Operations
+
+`BlockMap` に対していくつかの操作が実装されています.
+
+#### Evaluate
+
+`BlockMap` に記号列を入力することができます. 入力列の型には `Vector{Int}` や `Int...` などが使用できます.
+
+```@repl blockmaps
+shift_flip((1, 2, 2, 1, 2, 1))
+shift_flip([1, 2, 2, 1, 2, 1])
+shift_flip(1, 2, 2, 1, 2, 1)
+```
+
+`Dict{Int, Int}` を使用することで `memory` による index のズレも考慮します.
+
+```@repl blockmaps
+sq = zip(1:6, [1, 2, 2, 1, 2, 1]) |> Dict
+osq = shift([2;;])(sq)
+sort(collect(osq), by=first)
+```
+
+#### Composition
+
+2 つの `BlockMap` を合成することができます.
+
+```@repl blockmaps
+flip = marker_endomorphism("*")
+flip(shift_flip)
+```
+
+#### Inverse
+
+[`inv`](@ref) を用いることで与えられた `BlockMap` の逆写像を求めることができます. アルゴリズムの都合により逆写像が存在していても見つけられない場合があります. 逆写像を見つけることができなかった場合はエラーになります.
+
+```@repl blockmaps
+inv(BlockMaps.identity([1 1; 1 0]))
+inv(shift_flip)
+```
+
+#### Extend and Shorten
+
+[`extend`](@ref) は与えられた `BlockMap` の `blocks` field の domain 側のブロックを前後に延長した `BlockMap` を返します.
+
+```@repl blockmaps
+extended_shift = extend(shift([1 1; 1 0]), 2, 1) # 第二引数が左に延長する長さ, 第三引数が右に延長する長さ
+```
+
+[`shorten`](@ref) は [`extend`](@ref) の逆で与えられた `BlockMap` の `blocks` field の domain ブロックを縮めます. `BlockMap` のみを与えた場合は縮められるだけ縮めます. 第二, 第三引数を用いることで [`extend`](@ref) と同様に縮める長さを指定できます.
+
+```@repl blockmaps
+shorten(extended_shift) # 縮められるだけ縮める
+shorten(extended_shift, 1, 1) # 第二引数が左に縮める長さ, 第三引数が右に縮める長さ
+```
+
+元の BlockMap と互換性がなくなるほど縮める場合は warn を出力します.
+
+```@repl blockmaps
+shorten(extended_shift, 0, 2)
+```
+
+`BlockMap` に対する [`inv`](@ref) や合成は [`shorten`](@ref) されたものを返します.
+
+### Shift Equivalence
+
+[`BlockMaps`](@ref) には Elementary Strong Shift Equivalence (ESSE) を扱うための構造体 [`ElementaryStrongShiftEquivalence`](@ref) と Strong Shift Equivalence (SSE) を扱うための構造体 [`StrongShiftEquivalence`](@ref) が定義されています.
+
+#### Elementary Strong Shift Equivalence
+
+[`ElementaryStrongShiftEquivalence`](@ref) は二つの行列からなる構造体です. Alias として [`ESSE`](@ref) が使用できます.
+
+```@repl blockmaps
+esse = ESSE([1 1] => [1; 1;;])
+esse.first * esse.second
+esse.second * esse.first
+```
+
+[`ESSE`](@ref) は mutable な `Pair{Matrix, Matrix}` として扱うことができ `iterate` や `length`, `reverse!` などを使用できます.
+
+```@repl blockmaps
+length(esse)
+first(esse)
+last(esse)
+esse[2]
+reverse!(esse)
+```
+
+#### Strong Shift Equivalence
+
+[`StrongShiftEquivalence`](@ref) は [`ElementaryStrongShiftEquivalence`](@ref) の有限列として定義されている構造体です. ``R_i \Rightarrow S_i, 1 \le i \le l`` を ESSE として, それらから Strong Shift Equivalence を定義する場合
+
+```math
+S_i R_i = R_{i+1} S_{i+1},\hspace{1em} 1 \le i \le l-1
+```
+
+を満たしている必要があります. 上の条件を満たしていない場合はエラーとなります. Alias として [`SSE`](@ref) が使用できます.
+
+```@repl blockmaps
+esse2 = ESSE([1 0; 0 1], [1 1; 1 1])
+sse = SSE(esse2, esse)
+```
+
+[`SSE`](@ref) は `Vector{ESSE}` として扱うことができ, `push!`, `append!`, `pop!`, `reverse!` などを使用できます.
+
+```@repl blockmaps
+reverse!(sse)
+```
+
+また固有のメソッドとして, [`reduce!`](@ref) があります. [`reduce!`](@ref) は与えられた [`SSE`](@ref) から単位行列を含む自明な [`ESSE`](@ref) を除去します. 最初に現れる, または最後に現れる自明な [`ESSE`](@ref) を除去したい場合はそれぞれ [`reducefirst!`](@ref), [`reducelast!`](@ref) を使用してください.
+
+```@repl blockmaps
+reduce!(sse)
+```
+
+#### Decomposition of Block Map
+
+[`StrongShiftEquivalence(::BlockMap)`](@ref) は与えられた [`BlockMap`](@ref) を state splitting, state amalgamation または permutation matrix による [`ESSE`](@ref) からなる [`SSE`](@ref) を計算する関数です. 返り値には [`SSE`](@ref) のほか, Dimension Group Representation を計算するときに必要な逆行列を掛ける回数をもちます.
+
+```@repl blockmaps
+decomp = SSE(shift_flip)
+decomp[1]
+decomp[2]
+```
+
+### Dimension Group Representation
+
+[`dimension_representation`](@ref) は与えられた [`SSE`](@ref) の dimension group representation を計算する関数です. 第二引数では dimension group representation の codomain に関連する行列の擬似逆行列を掛ける回数を指定できます. 省略した場合は `0` になります.
+
+```@repl blockmaps
+dimension_representation(decomp)
+dimension_representation(decomp[1])
+dimension_representation(decomp[1], 0)
+```
+
+関連する関数に [`orbitsign_number`](@ref), [`gyration_number`](@ref), [`sign_gyration_compatibility_condition`](@ref) があります. それぞれ与えられた [`BlockMap`](@ref) の orbit sign number, gyration number, sign gyration compatibility condition を計算します. それぞれ第二引数で計算に使用する軌道の周期を指定します. それぞれの alias として [`os`](@ref), [`gy`](@ref), [`sgcc`](@ref) が使用できます.
+
+[`orbitsign_number`](@ref) は ``\pm 1``, [`os`](@ref) は ``\{0, 1\}``, [`gyration_number(⋅, n)`](@ref) と [`gy(⋅, n)`](@ref), [`sign_gyration_compatibility_condition(⋅, n)`](@ref), [`sgcc(⋅, n)`](@ref) は ``\{0, 1, …, n-1\}`` の範囲で値をとります.
+
+```@repl blockmaps
+orbitsign_number(shift_flip, 4)
+os(shift_flip, 4)
+gy(shift_flip, 4)
+sgcc(shift_flip, 4)
+```
+
+---
+
 ## cascade-count.jl
+
+```@meta
+CurrentModule = Main
+```
 
 フルシフト ``\Sigma_2 = \{1, 2\}^\mathbb{Z}`` の与えられた subshifts of finite type ``X`` に対して、``\Sigma_2 \setminus X`` における ``(2, n)``-cascade の数を計算するためのプログラムです。
 Subshift of finite type は `1`, `2` と `"*"` をアルファベットとする有限個の forbidden words の配列で表されます。
@@ -51,6 +290,8 @@ Y = [(2, 1, "*", 2, 1)]
 count_cascade(Y, 12)' - count_cascade(X, 12)' # `'` is just for transpose
 ```
 
+---
+
 ## subshift-lattice.jl
 
 フルシフト ``\Sigma_2 = \{0, 1\}^\mathbb{Z}`` の与えられた subshifts of finite type の間の包含関係を計算するためのプログラムです。
@@ -95,6 +336,8 @@ shift_hasse_diagram([
 例えば上の実行例において、フルシフトのインデックスは `9` であり、`1` から `8` までの全ての頂点が `9` へのパスを持っています。
 よって、フルシフトは全ての subshift of finite type を包含していることがわかります。
 
+---
+
 ## Pruning.jl
 
 Hagiwara と Shudo [^HS] によって提案された、保存系の実 Hénon 写像の primary pruned region を推定するアルゴリズムを Julia で実装したものです。
@@ -116,10 +359,10 @@ julia> hm = HenonMap(5.59, -1)
 HenonMap(5.59, -1.0)
 ```
 
-[`HenonMap(a, b)`](@ref) は2つのパラメータを取る構造体で、以下の写像 ``H_{c, a}: \mathbb{R}^2 \to \mathbb{R}^2`` を定義します。
+[`HenonMap(a, b)`](@ref) は2つのパラメータを取る構造体で、以下の写像 ``H_{a, b}: \mathbb{R}^2 \to \mathbb{R}^2`` を定義します。
 
 ```math
-H_{c, a}(x, y) = (-x^2 + b y + a,\ x).
+H_{a, b}(x, y) = (-x^2 + b y + a,\ x).
 ```
 
 ### 2. ホモクリニック点の計算

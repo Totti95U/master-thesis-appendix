@@ -781,10 +781,6 @@ Base.length(block_map::BlockMap{N}) where N = N
     (block_map::BlockMap)(seq::Int...) -> ::Tuple{Vararg{Int}}
 
 Return the block map output of given symbolic sequence.
-
-# Examples
-```jldoctest
-```
 """
 function (block_map::BlockMap)(in_seq::Tuple{Vararg{Int}})::Tuple{Vararg{Int}}
     l = length(block_map)
@@ -1421,10 +1417,6 @@ end
     identity(A::Matrix{Int})
 
 Return the identity block map of the given matrix.
-
-# Examples
-```jldoctest
-```
 """
 function identity(A::Matrix{Int})
     if size(A)[1] != size(A)[2]
@@ -1451,10 +1443,6 @@ end
 Return the shift block map of the given matrix. 
 If A contains only 0 and 1, the function returns the block map on the vertex shift. 
 Otherwise, the function returns the block map on the edge shift.
-
-# Examples
-```jldoctest
-```
 """
 function shift(A::Matrix{Int})
     if size(A)[1] != size(A)[2]
@@ -1563,6 +1551,7 @@ Return the compound marker automorphism on the full two shift.
 ```jldoctest
 julia> marker_automorphism("1 1 * 2", "2 * 2 1")
 BlockMap([2;;], [2;;], Dict{Tuple{Vararg{Int64}}, Int64}((1, 1, 2, 2, 2) => 1, (1, 1, 2, 1, 2) => 2, (1, 2, 2, 2, 1) => 1, (1, 2, 2, 1, 1) => 2, (2, 1, 1, 2, 1) => 1, (2, 1, 1, 1, 1) => 1, (1, 2, 2, 2, 2) => 2, (1, 2, 2, 1, 2) => 2, (2, 1, 1, 2, 2) => 1, (2, 1, 1, 1, 2) => 1…), 2)
+```
 """
 function marker_endomorphism(markers::Tuple{Vararg{String}})
     splited = Array{Array{Union{Int, Char}, 1}, 1}()
@@ -1656,10 +1645,6 @@ end
     inv(block_map::BlockMap)
 
 Return the inverse block map of the given block map.
-
-# Examples
-```jldoctest
-```
 """
 function Base.inv(block_map::BlockMap)
     block_map = shorten(block_map)
@@ -1728,8 +1713,6 @@ Extend the defining blocks of given block map.
 This function return a block map which has definition blocks extended by `pre` in forward and `post` in backward.
 
 If `pre` or `post` is negative, this function runs `shorten` instead.
-
-# Examples
 """
 function extend(block_map::BlockMap, pre::Int = 0, post::Int = 0)
     nonneg_pre = max(0, pre)
@@ -1771,6 +1754,7 @@ f = extend(shift([2;;]), 1, 2)
 
 julia> shortenable(f)
 (1, 2)
+```
 """
 function shortenable(block_map::BlockMap)
     blocks = block_map.blocks
@@ -1864,7 +1848,7 @@ shorten(f, 1, 1)
 (1, 2) => 1
 (2, 1) => 2
 (2, 2) => 2
-````
+```
 """
 function shorten(block_map::BlockMap, pre::Int, post::Int)
     nonneg_pre = max(0, pre)
@@ -1896,10 +1880,6 @@ end
     Matrix(block_map::BlockMap)
 
 Return the matrix representation of the given block map.
-
-# Examples
-```jldoctest
-```
 """
 function Base.Matrix(block_map::BlockMap)
     l = length(block_map)
@@ -1921,10 +1901,6 @@ end
 Compute the strong shift equivalence over ℤ₊ (SSE-ℤ₊) of the given block map and how many times the δ(A)⁻¹ must be applied to get the dimension representation of the block map.
 
 You can also use `SSE(block_map::BlockMap)` instead of `StrongShiftEquivalence(block_map::BlockMap)`.
-
-# Examples
-```jldoctest
-```
 """
 function StrongShiftEquivalence(block_map::BlockMap; alg::Symbol = :Kitchens)
     if alg == :Kitchens
