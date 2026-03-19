@@ -11,7 +11,7 @@ Depth = 2:2
 
 ---
 
-## BlockMaps.jl
+## [BlockMaps.jl](@id guide_of_BlockMaps.jl)
 
 ```@meta
 CurrentModule = BlockMaps
@@ -239,7 +239,7 @@ sgcc(shift_flip, 4)
 
 ---
 
-## cascade-count.jl
+## [cascade-count.jl](@id guide_of_cascade-count.jl)
 
 ```@meta
 CurrentModule = Main
@@ -292,7 +292,7 @@ count_cascade(Y, 12)' - count_cascade(X, 12)' # `'` is just for transpose
 
 ---
 
-## subshift-lattice.jl
+## [subshift-lattice.jl](@id guide_of_subshift-lattice.jl)
 
 フルシフト ``\Sigma_2 = \{0, 1\}^\mathbb{Z}`` の与えられた subshifts of finite type の間の包含関係を計算するためのプログラムです。
 このプログラムは、subshift of finite type を構成する forbidden words の集合を入力として受け取り、subshift of finite type の間の包含関係を計算します。
@@ -338,7 +338,7 @@ shift_hasse_diagram([
 
 ---
 
-## Pruning.jl
+## [Pruning.jl](@id guide_of_Pruning.jl)
 
 Hagiwara と Shudo [^HS] によって提案された、保存系の実 Hénon 写像の primary pruned region を推定するアルゴリズムを Julia で実装したものです。
 実 Hénon 写像の横断的なホモクリニック点を計算し、それらをフルシフト ``\Sigma_2`` の点に対応させることで、pruned words を推定します。

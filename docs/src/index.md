@@ -6,10 +6,10 @@
 
 公開しているプログラムは以下の通りです。
 
-- BlockMaps.jl
-- cascade-count.jl
-- subshift-lattice.jl
-- Pruning.jl
+- [BlockMaps.jl](@ref guide_of_BlockMaps.jl)
+- [cascade-count.jl](@ref guide_of_cascade-count.jl)
+- [subshift-lattice.jl](@ref guide_of_subshift-lattice.jl)
+- [Pruning.jl](@ref guide_of_Pruning.jl)
 
 ## 導入方法
 
@@ -22,5 +22,5 @@ GitHub リポジトリ [https://github.com/Totti95U/master-thesis-appendix](http
 
 - BlockMaps.jl: `LinearAlgebra`, `Permutations`
 - cascade-count.jl: なし
-- subshift-lattice.jl: `Graphs`, `GraphPlot` (example でのみ使用)
+- subshift-lattice.jl: `CairoMakie`, `Graphs`, `GraphPlot`
 - Pruning.jl: `CairoMakie`, `LinearAlgebra`, `SpatialIndexing`, `ProgressMeter`
