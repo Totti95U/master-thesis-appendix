@@ -1986,10 +1986,12 @@ function _kitchens_StrongShiftEquivalence(block_map::BlockMap)
     _pre = x_zero_index < 1 ? -x_zero_index + 1 : 0
     _post = x_zero_index > l ? x_zero_index - l : 0
     block_map = extend(block_map, _pre, _post)
+    l = length(block_map)
 
     _inv_pre = y_zero_index < 1 ? -y_zero_index + 1 : 0
     _inv_post = y_zero_index > l_inv ? y_zero_index - l_inv : 0
     inv_map = extend(inv_map, _inv_pre, _inv_post)
+    l_inv = length(block_map)
 
     # sort by order that makes subdivision matrix like a diagonal matrix
     full_blocks = Set{Pair{NTuple{l, Int}, NTuple{l_inv, Int}}}()
