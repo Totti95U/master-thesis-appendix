@@ -1272,7 +1272,7 @@ f = extend(shift([2;;]), 1, 0)
 (2, 1) => 1
 (2, 2) => 2
 
-sse = _kichens_StrongShiftEquivalence(f)[1]
+sse = _kitchens_StrongShiftEquivalence(f)[1]
 StrongShiftEquivalence with lag 6:
                                ⎡1 0⎤            ⎡1 1 0 0⎤ ⎡1 0 0 0⎤
                                ⎢0 1⎥  ⎡1 1 0 0⎤ ⎢0 0 1 1⎥ ⎢0 1 0 0⎥  ⎡1 1 0 0⎤
@@ -2466,7 +2466,7 @@ function dimension_representation(sse::StrongShiftEquivalence, shift_inv::Int=0)
 end
 
 dimension_representation(x::Tuple{SSE, Int}) = dimension_representation(x[1], x[2])
-dimension_representation(block_map::BlockMap) = dimension_representation(_kichens_StrongShiftEquivalence(block_map))
+dimension_representation(block_map::BlockMap) = dimension_representation(_kitchens_StrongShiftEquivalence(block_map))
 
 """
     orbitsign_number(f::BlockMap, n)
